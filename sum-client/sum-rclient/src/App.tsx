@@ -3,21 +3,40 @@ import logo from './logo.svg'
 import './App.css'
 
 import * as WebSocket from "websocket"
+import React from 'react'
+import { ChatList } from './components/chatlist'
 
 
 
 
 function App() {
 
+
+  const [textElement, setTextElement] = useState<string>("")
+  const [socket, setSocket] = useState<WebSocket.w3cwebsocket | null>(null)
+  const [messages, setMessage] = useState<string[]>([])
+
+  const sendMsg = () => {
+    socket?.send(textElement)
+  }
+  const onChangeText = (event: any) => {
+    
+    setTextElement(event.target.value)
+  }
+
+
+  const addMessage = (message: string) => {
+    setMessage(m => [...m, message])
+  }
   useEffect(() => {
     console.log("in it")
     const socket = new WebSocket.w3cwebsocket('ws://localhost:8080/ws');
-
+    setSocket(socket);
     socket.onopen = function () {
       socket.send("helloheee!")
-      socket.onmessage = (msg: any) => {
-        console.log(msg);
-        console.log("we got msg..")
+      socket.onmessage = (data: any) => {
+        let dataInJson = JSON.parse(data.data);
+        addMessage(dataInJson.message);
       };
     };
   }, []);
@@ -30,33 +49,13 @@ function App() {
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>Hello Vite + React!</p>
-        <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
+          <ChatList messages={messages} />
         <p>
           Edit <code>App.tsx</code> and save to test HMR updates.
         </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {' | '}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
+        <input type="text" onChange={onChangeText} className='text-area' />
+        <input type="submit" onClick={sendMsg} className='submit' />
+
       </header>
     </div>
   )
