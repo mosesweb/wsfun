@@ -7,12 +7,13 @@ import * as WebSocket from "websocket"
 class ChatMessage {
   time: number = 0
   text: string = "";
+  user: string = "";
 
-  static NewMessage(text: string, time: number) {
+  static NewMessage(text: string, time: number, user: string) {
     const newMessage = new ChatMessage();
     newMessage.text = text;
     newMessage.time = time;
-
+    newMessage.user = user;
     return newMessage;
   }
 }
@@ -21,7 +22,7 @@ class ChatMessage {
 function App() {
   const [count, setCount] = useState(0)
   const [messageInput, setMessageInput] = useState("")
-  const [usernameInput, setUsernameInput] = useState("an user")
+  const [userInput, setuserInput] = useState("an user")
   const [clientSocket, setClientSocket] = useState<WebSocket.w3cwebsocket | null>(null)
 
   const [messages, SetMessages] = useState<ChatMessage[]>([]);
@@ -39,7 +40,7 @@ function App() {
         var obj = JSON.parse(msg.data);
         if(messages.findIndex(m => m.time !== obj.time)) {
           SetMessages(messagehistory => [...messagehistory,
-            ChatMessage.NewMessage(obj.text, obj.time)].sort((a, b) => b.time - a.time))
+            ChatMessage.NewMessage(obj.text, obj.time, obj.user)].sort((a, b) => b.time - a.time))
         }
       };
     };
@@ -50,7 +51,7 @@ function App() {
     const msg = JSON.stringify({
       text: messageInput,
       time: +new Date(),
-      user: usernameInput,
+      user: userInput,
     })
     clientSocket?.send(msg)
     if(textarea.current != null)
@@ -61,8 +62,8 @@ function App() {
     setMessageInput(event.target.value);
   }
 
-  const handleUsernameInput = (event: ChangeEvent<HTMLInputElement>)  => {
-    setUsernameInput(event.target.value);
+  const handleuserInput = (event: ChangeEvent<HTMLInputElement>)  => {
+    setuserInput(event.target.value);
   }
 
   useEffect(() => {
@@ -73,12 +74,11 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>Fun chat {messages.length}</p>
+        <p>Chat</p>
         <div className="chatbox">
         {
           messages.map((m, i: number) => {
-            return <div key={i}>{m.text}</div>
+            return <div key={i}>{m.user}: {m.text}</div>
           })
         }
         </div>
@@ -87,7 +87,7 @@ function App() {
          <button  className='sendbtn' onClick={send}>SEND</button>
         </p>
         <p>
-          <input type="text" placeholder={"an user"} onChange={handleUsernameInput} />
+          <input type="text" placeholder={"an user"} onChange={handleuserInput} />
         </p>
       </header>
     </div>
