@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -51,6 +52,12 @@ type WsHub struct {
 	clients    map[*Client]bool
 }
 
+type CoolMessage struct {
+	Text string `json:"text"`
+	Time int64  `json:"time"`
+	User string `json:"user"`
+}
+
 // readPump pumps messages from the websocket connection to the hub.
 //
 // The application runs readPump in a per-connection goroutine. The application
@@ -72,8 +79,15 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+
+		if err != nil {
+			c.conn.Close()
+			break
+		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		print("message!" + string(message))
+		println("message!" + string(message))
+		//var message2 = []byte("hello lol!!!")
+
 		c.hub.broadcast <- message
 	}
 }
@@ -128,18 +142,29 @@ func (h *WsHub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			print("register!")
+			println("register!")
 			h.clients[client] = true
-			print("HERE THEN", len(h.clients))
+			println("HERE THEN", len(h.clients))
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
 		case message := <-h.broadcast:
+			var storehere CoolMessage
+			parseerr := json.Unmarshal(message, &storehere)
+			if parseerr != nil {
+				print("cant parse the incoming msg")
+				break
+			}
+			var coool = CoolMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
+			var coolmsgbytes, err = json.Marshal(coool)
+			if err != nil {
+				break
+			}
 			for client := range h.clients {
 				select {
-				case client.send <- message:
+				case client.send <- coolmsgbytes:
 				default:
 					close(client.send)
 					delete(h.clients, client)
@@ -161,7 +186,7 @@ func main() {
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
 	})
-
+	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -203,10 +228,5 @@ func reader(conn *websocket.Conn) {
 
 		// print out incoming message
 		fmt.Println("incoming message: " + string(p))
-
-		// if err := conn.WriteMessage(messageType, p); err != nil {
-		// 	log.Println(err)
-		// 	return
-		// }
 	}
 }

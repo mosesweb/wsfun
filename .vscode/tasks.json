@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "dev",
+			"path": "sum-client/sum-rclient",
+			"problemMatcher": [],
+			"label": "npm: dev - sum-client/sum-rclient",
+			"detail": "vite"
+		}
+	]
+}
