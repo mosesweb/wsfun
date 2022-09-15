@@ -20,7 +20,6 @@ class ChatMessage {
 
 
 function App() {
-  const [count, setCount] = useState(0)
   const [messageInput, setMessageInput] = useState("")
   const [userInput, setuserInput] = useState("an user")
   const [clientSocket, setClientSocket] = useState<WebSocket.w3cwebsocket | null>(null)
@@ -35,12 +34,25 @@ function App() {
     socket.onopen = function () {
       setClientSocket(socket);
       socket.onmessage = (msg: any) => {
-        console.log("we got msg..", msg);
-        var obj = JSON.parse(msg.data);
-        if(messages.findIndex(m => m.time !== obj.time)) {
-          SetMessages(messagehistory => [...messagehistory,
-            ChatMessage.NewMessage(obj.text, obj.time, obj.user)].sort((a, b) => b.time - a.time))
+       
+        var obj: ChatMessage[] = JSON.parse(msg.data);
+        if(!obj) {
+          obj = [];
         }
+        for(var i = 0; i < obj.length; i++) {
+          if(obj[i] === undefined) {
+            console.log("undefined")
+            continue;
+          }
+          console.log(obj[0].text);
+
+        if(messages.findIndex(m => m.time !== obj[i].time)) {
+          console.log("why", obj[i]);
+          const object = obj[i];
+          SetMessages(messagehistory => [...messagehistory,
+          ChatMessage.NewMessage(object.text, object.time, object.user)].sort((a, b) => b.time - a.time))
+        }
+      }
       };
     };
   }, []);
