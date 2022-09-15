@@ -151,6 +151,8 @@ func (h *WsHub) run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+			println("clients now:", len(h.clients))
+
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
@@ -243,7 +245,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 		log.Println(err)
 	}
 	log.Println("Client Connected")
-	println("clients: ", len(hub.clients))
+
 	// err = ws.WriteMessage(1, []byte("Hi Client!"))
 	// if err != nil {
 	// 	log.Println(err)
@@ -252,10 +254,11 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 
 	client := &Client{hub: hub, conn: ws, send: make(chan []byte, 256)}
 	fmt.Printf("welcome %+v\n", client.conn.RemoteAddr())
+
 	client.hub.register <- client
 
 	db, _ := c.Open("clover-db")
-	docs, err := db.Query("messages").FindAll()
+	docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
 	var dbmessages []CoolMessage
 	for _, doc := range docs {
 		print(doc)

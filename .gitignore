@@ -6,3 +6,4 @@ sum-server-golang/clover-db/KEYREGISTRY
 sum-server-golang/clover-db/DISCARD
 sum-server-golang/__debug_bin.exe
 *.exe
+sum-server-golang/__debug_bin.exe
