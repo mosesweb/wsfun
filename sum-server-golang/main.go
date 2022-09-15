@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	c "github.com/ostafen/clover"
 )
 
 var (
@@ -51,11 +52,18 @@ type WsHub struct {
 	unregister chan *Client
 	clients    map[*Client]bool
 }
-
+type MessageContainer struct {
+	Data CoolMessage `json:"alldata"`
+}
 type CoolMessage struct {
 	Text string `json:"text"`
 	Time int64  `json:"time"`
 	User string `json:"user"`
+}
+type CoolMessageDb struct {
+	Text string `clover:"text"`
+	Time int64  `clover:"time"`
+	User string `clover:"user"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -157,10 +165,32 @@ func (h *WsHub) run() {
 			}
 
 			var coool = CoolMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
-			var coolmsgbytes, err = json.Marshal(coool)
+			var cooolDb = CoolMessageDb{string(storehere.Text), time.Now().Unix(), storehere.User}
+
+			db, opendberr := c.Open("clover-db")
+			if opendberr != nil {
+				fmt.Println(fmt.Printf("Error %v", opendberr))
+			}
+			doc := c.NewDocument()
+			doc.Set("text", cooolDb.Text)
+			doc.Set("user", cooolDb.User)
+			doc.Set("time", cooolDb.Time)
+
+			// InsertOne returns the id of the inserted document
+			docId, inserterr := db.InsertOne("messages", doc)
+			if inserterr != nil {
+				fmt.Println(fmt.Printf("Error %v", inserterr))
+			}
+			fmt.Println(docId)
+
+			db.Close()
+			var messages []CoolMessage
+			messages = append(messages, coool)
+			var coolmsgbytes, err = json.Marshal(messages)
 			if err != nil {
 				break
 			}
+
 			for client := range h.clients {
 				select {
 				case client.send <- coolmsgbytes:
@@ -180,10 +210,18 @@ func main() {
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
 	}
+
+	db, _ := c.Open("clover-db")
+	db.CreateCollection("messages")
+	db.Close()
+
 	go hub.run()
 
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
+	})
+	http.HandleFunc("/allmessages", func(w http.ResponseWriter, r *http.Request) {
+
 	})
 	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
@@ -212,6 +250,34 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	client := &Client{hub: hub, conn: ws, send: make(chan []byte, 256)}
 	fmt.Printf("welcome %+v\n", client.conn.RemoteAddr())
 	client.hub.register <- client
+
+	db, _ := c.Open("clover-db")
+	docs, err := db.Query("messages").FindAll()
+	var dbmessages []CoolMessage
+	for _, doc := range docs {
+		print(doc)
+		//doc.Unmarshal(&storehere)
+		//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
+		timeposted, ok := doc.Get("time").(int64)
+
+		if !ok {
+			panic("cant parse the time")
+		}
+		var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
+		dbmessages = append(dbmessages, coool)
+
+	}
+
+	marshal, marshalerr := json.Marshal(dbmessages)
+	if marshalerr != nil {
+		panic("err")
+	}
+	client.send <- marshal
+
+	if err != nil {
+		log.Println("Error!")
+	}
+	db.Close()
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
