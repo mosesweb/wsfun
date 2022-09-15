@@ -21,7 +21,7 @@ class ChatMessage {
 
 function App() {
   const [messageInput, setMessageInput] = useState("")
-  const [userInput, setuserInput] = useState("an user")
+  const [userInput, setuserInput] = useState(localStorage.getItem("username"))
   const [clientSocket, setClientSocket] = useState<WebSocket.w3cwebsocket | null>(null)
 
   const [messages, SetMessages] = useState<ChatMessage[]>([]);
@@ -34,7 +34,7 @@ function App() {
     socket.onopen = function () {
       setClientSocket(socket);
       socket.onmessage = (msg: any) => {
-       
+
         var obj: ChatMessage[] = JSON.parse(msg.data);
         if(!obj) {
           obj = [];
@@ -55,6 +55,7 @@ function App() {
       }
       };
     };
+
   }, []);
 
 
@@ -80,6 +81,7 @@ function App() {
   }
 
   const handleuserInput = (event: ChangeEvent<HTMLInputElement>)  => {
+    localStorage.setItem("username", event.target.value);
     setuserInput(event.target.value);
   }
 
@@ -90,12 +92,11 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
         <p>Chat</p>
         <div className="chatbox">
         {
           messages.map((m, i: number) => {
-            return <div key={i}>{m.user}: {m.text}</div>
+            return <div className='msg' key={i}>{m.user}: {m.text}</div>
           })
         }
         </div>
@@ -104,9 +105,8 @@ function App() {
          <button  className='sendbtn' onClick={send}>SEND</button>
         </p>
         <p>
-          <input type="text" placeholder={"an user"} onChange={handleuserInput} />
+          <input type="text" placeholder={userInput ?? ""} onChange={handleuserInput} />
         </p>
-      </header>
     </div>
   )
 }

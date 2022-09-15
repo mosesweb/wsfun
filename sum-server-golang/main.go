@@ -212,16 +212,19 @@ func main() {
 	}
 
 	db, _ := c.Open("clover-db")
-	db.CreateCollection("messages")
+	hasMessages, err := db.HasCollection("messages")
+	if err != nil {
+		panic("cant get collection")
+	}
+	if !hasMessages {
+		db.CreateCollection("messages")
+	}
 	db.Close()
 
 	go hub.run()
 
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
-	})
-	http.HandleFunc("/allmessages", func(w http.ResponseWriter, r *http.Request) {
-
 	})
 	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
