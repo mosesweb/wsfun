@@ -142,9 +142,7 @@ func (h *WsHub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			println("register!")
 			h.clients[client] = true
-			println("HERE THEN", len(h.clients))
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
@@ -157,6 +155,7 @@ func (h *WsHub) run() {
 				print("cant parse the incoming msg")
 				break
 			}
+
 			var coool = CoolMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
 			var coolmsgbytes, err = json.Marshal(coool)
 			if err != nil {
@@ -186,6 +185,9 @@ func main() {
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
 	})
+	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
+	})
 	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -200,7 +202,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 		log.Println(err)
 	}
 	log.Println("Client Connected")
-	print("clients: ", len(hub.clients))
+	println("clients: ", len(hub.clients))
 	// err = ws.WriteMessage(1, []byte("Hi Client!"))
 	// if err != nil {
 	// 	log.Println(err)
@@ -208,6 +210,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	// reader(ws)
 
 	client := &Client{hub: hub, conn: ws, send: make(chan []byte, 256)}
+	fmt.Printf("welcome %+v\n", client.conn.RemoteAddr())
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in

@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import logo from './logo.svg'
 import './App.css'
 
@@ -34,7 +34,6 @@ function App() {
 
     socket.onopen = function () {
       setClientSocket(socket);
-      socket.send("helloheee!")
       socket.onmessage = (msg: any) => {
         console.log("we got msg..", msg);
         var obj = JSON.parse(msg.data);
@@ -46,6 +45,7 @@ function App() {
     };
   }, []);
 
+
   const send = function() {
     console.log("click")
     const msg = JSON.stringify({
@@ -53,9 +53,14 @@ function App() {
       time: +new Date(),
       user: userInput,
     })
+
+    if(messageInput != "")
     clientSocket?.send(msg)
-    if(textarea.current != null)
+
+    if(textarea.current != null) {
       textarea.current.value = "";
+    }
+    setMessageInput("");
   }
 
   const handleInput = (event: ChangeEvent<HTMLTextAreaElement>) => {
