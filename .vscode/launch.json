@@ -5,11 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Kubernetes: Run/Debug",
+            "type": "cloudcode.kubernetes",
+            "request": "launch",
+            "skaffoldConfig": "${workspaceFolder}\\sum-server-golang\\skaffold.yaml",
+            "watch": true,
+            "cleanUp": true,
+            "portForward": true
+        },
+        {
             "command": "npm run dev",
             "name": "Front end",
             "request": "launch",
             "type": "node-terminal",
-            "cwd": "${workspaceFolder}/sum-client/sum-rclient",
+            "cwd": "${workspaceFolder}/sum-client/sum-rclient"
         },
         {
             "name": "Backend",
@@ -18,7 +27,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/sum-server-golang",
             "cwd": "${workspaceFolder}/sum-server-golang",
-            "env": {},
-        },
+            "env": {}
+        }
     ]
 }

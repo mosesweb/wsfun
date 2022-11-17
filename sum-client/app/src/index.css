@@ -1,0 +1,28 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 20px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+.chatbox {
+  height: 300px;
+  overflow: auto;
+  background: #e7ffd4;
+  padding: 20px;
+}
+.msg {
+  background: white;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 5px;
+  max-width: 500px;
+  margin: auto;
+  margin-top: 5px;
+}

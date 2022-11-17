@@ -1,0 +1,9 @@
+services:
+  backend: 
+    build: sum-server-golang/.
+    ports:
+      - "3080:3080"
+  frontend:
+    build: sum-client/app/.
+    ports:
+      - "3600:3600"
