@@ -7,11 +7,11 @@ build:
     sha256: {}
   artifacts:
   - context: .
-    image: go-sum-server-golang
-# deploy:
-#   kubectl:
-#     manifests:
-#     - kubernetes-manifests/**
+    image: sum-server-golang
+deploy:
+  kubectl:
+    manifests:
+    - kubernetes-manifests/**
 profiles:
 - name: cloudbuild
   build:
