@@ -29,7 +29,7 @@ function App() {
 
   useEffect(() => {
     console.log("in it")
-    const socket = new WebSocket.w3cwebsocket('ws://192.168.1.221:3080/ws');
+    const socket = new WebSocket.w3cwebsocket('ws://localhost:3080/ws');
 
     socket.onopen = function () {
       setClientSocket(socket);

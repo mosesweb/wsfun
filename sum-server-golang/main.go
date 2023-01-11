@@ -2,14 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
 	c "github.com/ostafen/clover"
+	"google.golang.org/api/iterator"
 )
 
 var (
@@ -51,6 +55,8 @@ type WsHub struct {
 	register   chan *Client
 	unregister chan *Client
 	clients    map[*Client]bool
+	fsclient   *firestore.Client
+	ctx        context.Context
 }
 type MessageContainer struct {
 	Data CoolMessage `json:"alldata"`
@@ -188,8 +194,8 @@ func (h *WsHub) run() {
 			db.Close()
 			var messages []CoolMessage
 			messages = append(messages, coool)
-			var coolmsgbytes, err = json.Marshal(messages)
-			if err != nil {
+			var coolmsgbytes, perr = json.Marshal(messages)
+			if perr != nil {
 				break
 			}
 
@@ -206,22 +212,38 @@ func (h *WsHub) run() {
 }
 
 func main() {
+
+	// Use the application default credentials
+	ctx := context.Background()
+	conf := &firebase.Config{ProjectID: "mychat-359818"}
+	firestoreApp, err := firebase.NewApp(ctx, conf)
+	if err != nil {
+		panic("not good firebase.NewApp cant be loaded")
+	}
+	firestoreclient, err := firestoreApp.Firestore(ctx)
+	if err != nil {
+		panic("not good firestore cant be loaded")
+	}
+
 	hub := &WsHub{
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		fsclient:   firestoreclient,
+		ctx:        ctx,
 	}
 
-	db, _ := c.Open("clover-db")
-	hasMessages, err := db.HasCollection("messages")
 	if err != nil {
-		panic("cant get collection")
+		log.Fatalln(err)
 	}
-	if !hasMessages {
-		db.CreateCollection("messages")
+
+	if err != nil {
+		log.Fatalln(err)
 	}
-	db.Close()
+
+	fmt.Println("INIT FIRESTORE!")
+	log.Println("INITED FIRESTORE")
 
 	go hub.run()
 
@@ -232,7 +254,7 @@ func main() {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
 	})
 	log.Println("Running golang backend!")
-	log.Fatal(http.ListenAndServe("192.168.1.221:3080", nil))
+	log.Fatal(http.ListenAndServe("localhost:3080", nil))
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
@@ -256,23 +278,40 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	fmt.Printf("welcome %+v\n", client.conn.RemoteAddr())
 
 	client.hub.register <- client
+	var dbmessages []*CoolMessage
 
-	db, _ := c.Open("clover-db")
-	docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
-	var dbmessages []CoolMessage
-	for _, doc := range docs {
-		print(doc)
-		//doc.Unmarshal(&storehere)
-		//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
-		timeposted, ok := doc.Get("time").(int64)
-
-		if !ok {
-			panic("cant parse the time")
+	iter := hub.fsclient.Collection("messages").Documents(hub.ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
 		}
-		var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
-		dbmessages = append(dbmessages, coool)
+		if err != nil {
+			log.Fatalf("Failed to iterate: %v", err)
+		}
+		fmt.Println(doc.Data())
 
+		var c CoolMessage
+		doc.DataTo(&c)
+		fmt.Printf("Document data: %#v\n", c)
+		//var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Data("")("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
+		dbmessages = append(dbmessages, &c)
 	}
+
+	// docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
+	// for _, doc := range docs {
+	// 	print(doc)
+	// 	//doc.Unmarshal(&storehere)
+	// 	//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
+	// 	timeposted, ok := doc.Get("time").(int64)
+
+	// 	if !ok {
+	// 		panic("cant parse the time")
+	// 	}
+	// 	var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
+	// 	dbmessages = append(dbmessages, coool)
+
+	// }
 
 	marshal, marshalerr := json.Marshal(dbmessages)
 	if marshalerr != nil {
@@ -283,7 +322,6 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	if err != nil {
 		log.Println("Error!")
 	}
-	db.Close()
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
