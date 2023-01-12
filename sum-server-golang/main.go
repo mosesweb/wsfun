@@ -12,7 +12,6 @@ import (
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
-	c "github.com/ostafen/clover"
 	"google.golang.org/api/iterator"
 )
 
@@ -65,11 +64,6 @@ type CoolMessage struct {
 	Text string `json:"text"`
 	Time int64  `json:"time"`
 	User string `json:"user"`
-}
-type CoolMessageDb struct {
-	Text string `clover:"text"`
-	Time int64  `clover:"time"`
-	User string `clover:"user"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -173,25 +167,13 @@ func (h *WsHub) run() {
 			}
 
 			var coool = CoolMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
-			var cooolDb = CoolMessageDb{string(storehere.Text), time.Now().Unix(), storehere.User}
 
-			db, opendberr := c.Open("clover-db")
-			if opendberr != nil {
-				fmt.Println(fmt.Printf("Error %v", opendberr))
+			_, err := h.fsclient.Collection("messages").NewDoc().Set(h.ctx, coool)
+			if err != nil {
+				// Handle any errors in an appropriate way, such as returning them.
+				log.Printf("An error has occurred: %s", err)
 			}
-			doc := c.NewDocument()
-			doc.Set("text", cooolDb.Text)
-			doc.Set("user", cooolDb.User)
-			doc.Set("time", cooolDb.Time)
 
-			// InsertOne returns the id of the inserted document
-			docId, inserterr := db.InsertOne("messages", doc)
-			if inserterr != nil {
-				fmt.Println(fmt.Printf("Error %v", inserterr))
-			}
-			fmt.Println(docId)
-
-			db.Close()
 			var messages []CoolMessage
 			messages = append(messages, coool)
 			var coolmsgbytes, perr = json.Marshal(messages)
