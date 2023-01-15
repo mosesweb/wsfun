@@ -236,7 +236,7 @@ func main() {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
 	})
 	log.Println("Running golang backend!")
-	log.Fatal(http.ListenAndServe("localhost:3080", nil))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
