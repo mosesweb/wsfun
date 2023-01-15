@@ -28,8 +28,9 @@ function App() {
   const textarea = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    console.log("in it")
-    const socket = new WebSocket.w3cwebsocket('ws://localhost:3080/ws');
+    console.log("in it...!!")
+
+    const socket = new WebSocket.w3cwebsocket('wss://myservice-ggddbbhemq-nw.a.run.app/ws');
 
     socket.onopen = function () {
       setClientSocket(socket);
