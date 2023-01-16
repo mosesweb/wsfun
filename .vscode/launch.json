@@ -11,14 +11,15 @@
             "skaffoldConfig": "${workspaceFolder}\\sum-server-golang\\skaffold.yaml",
             "watch": true,
             "cleanUp": true,
-            "portForward": true
+            "portForward": true,
+            
         },
         {
-            "command": "npm run dev",
+            "command": "npm run start",
             "name": "Front end",
             "request": "launch",
             "type": "node-terminal",
-            "cwd": "${workspaceFolder}/sum-client/app"
+            "cwd": "${workspaceFolder}/sum-client-react"
         },
         {
             "name": "Backend",

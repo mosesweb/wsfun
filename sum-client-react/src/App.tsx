@@ -1,5 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
-import logo from './logo.svg'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 import * as WebSocket from "websocket"
@@ -18,7 +17,6 @@ class ChatMessage {
   }
 }
 
-
 function App() {
   const [messageInput, setMessageInput] = useState("")
   const [userInput, setuserInput] = useState(localStorage.getItem("username"))
@@ -28,7 +26,6 @@ function App() {
   const textarea = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    console.log("in it...!!")
 
     const socket = new WebSocket.w3cwebsocket('wss://myservice-ggddbbhemq-nw.a.run.app/ws');
 
@@ -59,7 +56,6 @@ function App() {
 
   }, []);
 
-
   const send = function() {
     console.log("click")
     const msg = JSON.stringify({
@@ -68,8 +64,9 @@ function App() {
       user: userInput,
     })
 
-    if(messageInput != "")
-    clientSocket?.send(msg)
+    if(messageInput !== "") {
+      clientSocket?.send(msg)
+    }
 
     if(textarea.current != null) {
       textarea.current.value = "";
@@ -89,7 +86,6 @@ function App() {
   useEffect(() => {
     console.log(messages);
   }, [messages]);
-
 
   return (
     <div className="App">
