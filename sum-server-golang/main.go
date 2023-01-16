@@ -262,7 +262,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	client.hub.register <- client
 	var dbmessages []*CoolMessage
 
-	iter := hub.fsclient.Collection("messages").Documents(hub.ctx)
+	iter := hub.fsclient.Collection("messages").OrderBy("Time", firestore.Asc).Limit(50).Documents(hub.ctx)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
