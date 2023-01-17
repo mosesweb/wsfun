@@ -182,7 +182,7 @@ function App() {
   var formData = new FormData();
   formData.append("image", imageFile.current.files[0]);
   console.log(formData.get("image"));
-  axios.post('http://localhost:8080/imagefile', 
+  axios.post(process.env.REACT_APP_CHAT_API ?? "", 
   formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
