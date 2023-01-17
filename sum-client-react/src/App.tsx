@@ -32,15 +32,15 @@ function App() {
   const provider = new FacebookAuthProvider();
 
   const firebaseConfig = {
-    apiKey: "AIzaSyCaUQYTcebWzLOj6vVi-6kKkVIKmMPZPmc",
-    authDomain: "mychat-359818.firebaseapp.com",
-    projectId: "mychat-359818",
-    storageBucket: "mychat-359818.appspot.com",
-    messagingSenderId: "664404803242",
-    appId: "1:664404803242:web:3a6ea67f3674a6f4245ad3",
-    measurementId: "G-2WCTT5WJ1E"
+    apiKey: process.env.REACT_APP_APIKEY,
+    authDomain: process.env.REACT_APP_AUTHDOMAIN,
+    projectId: process.env.REACT_APP_PROJECTID,
+    storageBucket: process.env.REACT_APP_STORAGEBUCKET,
+    messagingSenderId: process.env.REACT_APP_MESSAGESENDERID,
+    appId: process.env.REACT_APP_APPID,
+    measurementId: process.env.REACT_APP_MEASUREMENTID,
   };
-  
+
   const app = initializeApp(firebaseConfig);
   const auth = getAuth();
 
@@ -153,6 +153,7 @@ function App() {
     // ...
   })
   .catch((error: any) => {
+    console.log(error);
     // Handle Errors here.
     const errorCode = error.code;
     const errorMessage = error.message;

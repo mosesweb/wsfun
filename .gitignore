@@ -7,3 +7,4 @@ sum-server-golang/clover-db/DISCARD
 sum-server-golang/__debug_bin.exe
 *.exe
 sum-server-golang/__debug_bin.exe
+sum-client-react/.env
