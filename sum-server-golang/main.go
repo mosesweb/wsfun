@@ -5,11 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"cloud.google.com/go/firestore"
+	vision "cloud.google.com/go/vision/apiv1"
 	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
 	"google.golang.org/api/iterator"
@@ -235,6 +238,9 @@ func main() {
 	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
 	})
+	http.HandleFunc("/imagefile", func(w http.ResponseWriter, r *http.Request) {
+
+	})
 	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -324,4 +330,40 @@ func reader(conn *websocket.Conn) {
 		// print out incoming message
 		fmt.Println("incoming message: " + string(p))
 	}
+}
+
+// detectText gets text from the Vision API for an image at the given file path.
+func detectText(w io.Writer, file string) error {
+	ctx := context.Background()
+
+	client, err := vision.NewImageAnnotatorClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	image, err := vision.NewImageFromReader(f)
+	if err != nil {
+		return err
+	}
+	annotations, err := client.DetectTexts(ctx, image, nil, 10)
+	if err != nil {
+		return err
+	}
+
+	if len(annotations) == 0 {
+		fmt.Fprintln(w, "No text found.")
+	} else {
+		fmt.Fprintln(w, "Text:")
+		for _, annotation := range annotations {
+			fmt.Fprintf(w, "%q\n", annotation.Description)
+		}
+	}
+
+	return nil
 }

@@ -28,7 +28,9 @@
             "mode": "auto",
             "program": "${workspaceFolder}/sum-server-golang",
             "cwd": "${workspaceFolder}/sum-server-golang",
-            "env": {}
+            "env": {
+                "GOOGLE_APPLICATION_CREDENTIALS":"./mychat-359818-040326b252ad.json"
+            }
         }
     ]
 }

@@ -29,6 +29,7 @@ function App() {
 
   const [messages, SetMessages] = useState<ChatMessage[]>([]);
   const textarea = useRef<HTMLInputElement>(null);
+  const imageFile = useRef<HTMLInputElement>(null);
   const provider = new FacebookAuthProvider();
 
   const firebaseConfig = {
@@ -71,7 +72,7 @@ function App() {
       }
     })
    
-    const socket = new WebSocket.w3cwebsocket('wss://myservice-ggddbbhemq-nw.a.run.app/ws');
+    const socket = new WebSocket.w3cwebsocket(process.env.REACT_APP_CHAT_API_WS ?? "");
 
     socket.onopen = function () {
       setClientSocket(socket);
@@ -166,8 +167,23 @@ function App() {
   });
  }
 
+ const uploadImage = async () => {
+  await quickstart();
+ }
+
+ async function quickstart() {
+
+  console.log(imageFile.current?.files);
+
+}
+quickstart();
+
   return (
    <> <div className="App">
+    <p>Image</p>
+    <div><input type="file" ref={imageFile} name="file"></input>
+    <button onClick={() => uploadImage()}>upload</button>
+    </div>
         <p>Chat</p>
         { auth.currentUser !== null && 
         <>

@@ -8,3 +8,5 @@ sum-server-golang/__debug_bin.exe
 *.exe
 sum-server-golang/__debug_bin.exe
 sum-client-react/.env
+sum-client-react/local.env
+sum-server-golang/mychat-359818-040326b252ad.json

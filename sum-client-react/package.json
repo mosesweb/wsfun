@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@google-cloud/vision": "^3.1.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -22,6 +23,7 @@
     "websocket": "^1.0.34"
   },
   "scripts": {
+    "dev": "set HTTPS=true&& env-cmd -f local.env react-scripts start ",
     "start": "set HTTPS=true&& env-cmd -f .env react-scripts start ",
     "build": "react-scripts build",
     "test": "react-scripts test",
