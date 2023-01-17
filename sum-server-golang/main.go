@@ -8,7 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -238,13 +238,57 @@ func main() {
 	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
 	})
+
 	http.HandleFunc("/imagefile", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Println("GO!")
+		ReceiveFile(w, r)
+		_, _, err := r.FormFile("image")
+		if err != nil {
+			fmt.Println("NOT GOOD!")
+			panic(err)
+		}
 
 	})
 	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+func ReceiveFile(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(32 << 20) // limit your max input length!
+	var buf bytes.Buffer
+	// in your case file would be fileupload
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	name := strings.Split(header.Filename, ".")
+	fmt.Printf("File name %s\n", name[0])
+	// Copy the file data to my buffer
+	_, errr := io.Copy(&buf, file)
+	if errr != nil {
+		panic(errr)
+	}
+	// do something with the contents...
+	// I normally have a struct defined and unmarshal into a struct, but this will
+	// work as an example
+	contents := buf.String()
+	//fmt.Println(contents)
+	// I reset the buffer in case I want to use it again
+	// reduces memory allocations in more intense projects
 
+	myReader := strings.NewReader(contents)
+	fmt.Fprintln(w, "lets go..1")
+
+	detectErr := detectText(w, myReader)
+	if detectErr != nil {
+		panic(detectErr)
+	}
+	buf.Reset()
+	// do something else
+	// etc write header
+}
 func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -333,21 +377,16 @@ func reader(conn *websocket.Conn) {
 }
 
 // detectText gets text from the Vision API for an image at the given file path.
-func detectText(w io.Writer, file string) error {
+func detectText(w io.Writer, reader io.Reader) error {
 	ctx := context.Background()
+	fmt.Fprintln(w, "lets go..")
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	image, err := vision.NewImageFromReader(f)
+	image, err := vision.NewImageFromReader(reader)
 	if err != nil {
 		return err
 	}

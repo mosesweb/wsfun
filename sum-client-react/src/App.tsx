@@ -3,6 +3,7 @@ import './App.css'
 import { getAuth, signInWithPopup, FacebookAuthProvider, signOut } from "firebase/auth";
 import * as WebSocket from "websocket"
 import { initializeApp } from 'firebase/app';
+import axios from 'axios';
 
 class User {
   displayName: string = "";
@@ -174,7 +175,21 @@ function App() {
  async function quickstart() {
 
   console.log(imageFile.current?.files);
-
+  if(!imageFile.current)
+    return;
+  if(!imageFile.current.files)
+    return;
+  var formData = new FormData();
+  formData.append("image", imageFile.current.files[0]);
+  console.log(formData.get("image"));
+  axios.post('http://localhost:8080/imagefile', 
+  formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+  }).then(e => {
+    console.log(e);
+  })
 }
 quickstart();
 
