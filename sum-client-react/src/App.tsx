@@ -28,7 +28,7 @@ function App() {
   const [clientSocket, setClientSocket] = useState<WebSocket.w3cwebsocket | null>(null)
 
   const [messages, SetMessages] = useState<ChatMessage[]>([]);
-  const textarea = useRef<HTMLTextAreaElement>(null);
+  const textarea = useRef<HTMLInputElement>(null);
   const provider = new FacebookAuthProvider();
 
   const firebaseConfig = {
@@ -99,8 +99,10 @@ function App() {
     };
 
   }, []);
+  
+  const send = function(event: any) {
+    event.preventDefault();
 
-  const send = function() {
     console.log("click")
     const msg = JSON.stringify({
       text: messageInput,
@@ -118,7 +120,7 @@ function App() {
     setMessageInput("");
   }
 
-  const handleInput = (event: ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInput = (event: ChangeEvent<HTMLInputElement>) => {
     setMessageInput(event.target.value);
   }
 
@@ -171,17 +173,21 @@ function App() {
         <div className="chatbox">
         {
           messages.map((m, i: number) => {
-            return <div className='msg' key={i}>{m.user}: {m.text}</div>
+            const thedate = new Date(m.time * 1000);
+            return <div className='msg' key={i}>
+                <div className="time-info">{thedate.toDateString() + " - " + thedate.toTimeString().substring(0, 8) } <b>{m.user}</b></div>
+            {m.text}</div>
           })
         }
         </div>
-        <p>
-         <textarea ref={textarea} placeholder="my message" id='msginput' onChange={handleInput}></textarea><br />
-         <button  className='sendbtn' onClick={send}>SEND</button>
-        </p>
+        <form>
+          <p>
+          <input type="text" ref={textarea} placeholder="my message" id='msginput' onChange={handleInput} /><br />
+          <button type='submit'  className='sendbtn' onClick={send}>SEND</button>
+          </p>
+        </form>
         </>
         }
-        <div>{clientUser?.displayName ?? ""}</div>
         {auth.currentUser === null && 
           <div onClick={() => login()}>Login</div> 
         }
