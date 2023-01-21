@@ -242,15 +242,20 @@ func main() {
 	http.HandleFunc("/imagefile", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		fmt.Println("GO!")
-		ReceiveFile(w, r)
-		_, _, err := r.FormFile("image")
-		if err != nil {
-			fmt.Println("NOT GOOD!")
-			panic(err)
-		}
 
+		fmt.Println("GO!")
+		_, _, err := r.FormFile("image")
+		switch err {
+		case nil:
+			ReceiveFile(w, r)
+		case http.ErrMissingFile:
+			log.Println("no file")
+			return
+		default:
+			log.Println(err)
+		}
 	})
+
 	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -279,7 +284,6 @@ func ReceiveFile(w http.ResponseWriter, r *http.Request) {
 	// reduces memory allocations in more intense projects
 
 	myReader := strings.NewReader(contents)
-	fmt.Fprintln(w, "lets go..1")
 
 	detectErr := detectText(w, myReader)
 	if detectErr != nil {
@@ -330,21 +334,6 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 		dbmessages = append(dbmessages, &c)
 	}
 
-	// docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
-	// for _, doc := range docs {
-	// 	print(doc)
-	// 	//doc.Unmarshal(&storehere)
-	// 	//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
-	// 	timeposted, ok := doc.Get("time").(int64)
-
-	// 	if !ok {
-	// 		panic("cant parse the time")
-	// 	}
-	// 	var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
-	// 	dbmessages = append(dbmessages, coool)
-
-	// }
-
 	marshal, marshalerr := json.Marshal(dbmessages)
 	if marshalerr != nil {
 		panic("err")
@@ -379,7 +368,6 @@ func reader(conn *websocket.Conn) {
 // detectText gets text from the Vision API for an image at the given file path.
 func detectText(w io.Writer, reader io.Reader) error {
 	ctx := context.Background()
-	fmt.Fprintln(w, "lets go..")
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
@@ -398,11 +386,25 @@ func detectText(w io.Writer, reader io.Reader) error {
 	if len(annotations) == 0 {
 		fmt.Fprintln(w, "No text found.")
 	} else {
-		fmt.Fprintln(w, "Text:")
 		for _, annotation := range annotations {
-			fmt.Fprintf(w, "%q\n", annotation.Description)
+			fmt.Fprintf(w, "%q,", annotation.Description)
 		}
 	}
 
 	return nil
 }
+
+// docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
+// for _, doc := range docs {
+// 	print(doc)
+// 	//doc.Unmarshal(&storehere)
+// 	//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
+// 	timeposted, ok := doc.Get("time").(int64)
+
+// 	if !ok {
+// 		panic("cant parse the time")
+// 	}
+// 	var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
+// 	dbmessages = append(dbmessages, coool)
+
+// }

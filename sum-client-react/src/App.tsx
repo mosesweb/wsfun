@@ -31,6 +31,8 @@ function App() {
   const [messages, SetMessages] = useState<ChatMessage[]>([]);
   const textarea = useRef<HTMLInputElement>(null);
   const imageFile = useRef<HTMLInputElement>(null);
+  const [imageText, SetimageText] = useState<string>();
+
   const provider = new FacebookAuthProvider();
 
   const firebaseConfig = {
@@ -189,6 +191,7 @@ function App() {
       }
   }).then(e => {
     console.log(e);
+    SetimageText(e.data);
   })
 }
 quickstart();
@@ -196,6 +199,7 @@ quickstart();
   return (
    <> <div className="App">
     <p>Image</p>
+    <div>{imageText}</div>
     <div><input type="file" ref={imageFile} name="file"></input>
     <button onClick={() => uploadImage()}>upload</button>
     </div>

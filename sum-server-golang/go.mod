@@ -9,7 +9,10 @@ require (
 	google.golang.org/api v0.107.0
 )
 
-require cloud.google.com/go/vision/v2 v2.5.0 // indirect
+require (
+	cloud.google.com/go/vision/v2 v2.5.0 // indirect
+	github.com/gomodule/redigo v1.8.9 // indirect
+)
 
 require (
 	cloud.google.com/go v0.105.0 // indirect
