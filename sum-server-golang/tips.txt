@@ -2,5 +2,5 @@ Actually works
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:/Users/moses/go/sumproj/sum-server-golang/x-x.json"
 
 deploy
-gcloud builds submit --tag gcr.io/x/myservice
-gcloud run deploy myservice --image gcr.io/x/myservice
+gcloud builds submit --tag gcr.io/mychat-359818/myservice
+gcloud run deploy myservice --image gcr.io/mychat-359818/myservice

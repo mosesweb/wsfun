@@ -16,7 +16,14 @@
         },
         {
             "command": "npm run dev",
-            "name": "Front end",
+            "name": "Front end (http)",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/sum-client-react"
+        },
+        {
+            "command": "npm run start",
+            "name": "Front end (https)",
             "request": "launch",
             "type": "node-terminal",
             "cwd": "${workspaceFolder}/sum-client-react"

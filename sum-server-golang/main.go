@@ -13,6 +13,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	vision "cloud.google.com/go/vision/apiv1"
+	"cloud.google.com/go/vision/v2/apiv1/visionpb"
 	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
 	"google.golang.org/api/iterator"
@@ -232,6 +233,10 @@ func main() {
 
 	go hub.run()
 
+	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(rw, "nothing fun here")
+	})
+
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
 	})
@@ -365,6 +370,15 @@ func reader(conn *websocket.Conn) {
 	}
 }
 
+type imageResponse struct {
+	Image []byte     `json:"image"`
+	Texts []textInfo `json:"texts"`
+}
+type textInfo struct {
+	Text         string                 `json:"text"`
+	Boundingpoly *visionpb.BoundingPoly `json:"boundingpoly"`
+}
+
 // detectText gets text from the Vision API for an image at the given file path.
 func detectText(w io.Writer, reader io.Reader) error {
 	ctx := context.Background()
@@ -383,12 +397,39 @@ func detectText(w io.Writer, reader io.Reader) error {
 		return err
 	}
 
+	textInfos := make([]textInfo, 0)
 	if len(annotations) == 0 {
 		fmt.Fprintln(w, "No text found.")
 	} else {
-		for _, annotation := range annotations {
-			fmt.Fprintf(w, "%q,", annotation.Description)
+		result := &imageResponse{
+			Image: image.Content,
 		}
+		for _, annotation := range annotations {
+
+			//fmt.Fprintf(w, "%q,", annotation.Description)
+			if annotation.Description == "" || annotation.BoundingPoly == nil {
+				continue
+			}
+			obj := &textInfo{
+				Text:         annotation.Description,
+				Boundingpoly: annotation.BoundingPoly,
+			}
+			//fmt.Println(annotation.BoundingPoly)
+
+			textInfos = append(textInfos, *obj)
+		}
+
+		result.Texts = textInfos
+
+		//fmt.Fprintf(w, "%v", textInfos)
+		b, err := json.Marshal(result)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Fprintf(w, "%v", string(b))
+
+		//fmt.Println(string(b))
+
 	}
 
 	return nil
