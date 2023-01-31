@@ -5,17 +5,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	b64 "encoding/base64"
 
 	"cloud.google.com/go/firestore"
 	vision "cloud.google.com/go/vision/apiv1"
 	"cloud.google.com/go/vision/v2/apiv1/visionpb"
 	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
+	"github.com/twpayne/go-geom"
 	"google.golang.org/api/iterator"
 )
 
@@ -62,9 +71,9 @@ type WsHub struct {
 	ctx        context.Context
 }
 type MessageContainer struct {
-	Data CoolMessage `json:"alldata"`
+	Data ChatMessage `json:"alldata"`
 }
-type CoolMessage struct {
+type ChatMessage struct {
 	Text string `json:"text"`
 	Time int64  `json:"time"`
 	User string `json:"user"`
@@ -163,14 +172,14 @@ func (h *WsHub) run() {
 				close(client.send)
 			}
 		case message := <-h.broadcast:
-			var storehere CoolMessage
+			var storehere ChatMessage
 			parseerr := json.Unmarshal(message, &storehere)
 			if parseerr != nil {
 				print("cant parse the incoming msg")
 				break
 			}
 
-			var coool = CoolMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
+			var coool = ChatMessage{string(storehere.Text), time.Now().Unix(), storehere.User}
 
 			_, err := h.fsclient.Collection("messages").NewDoc().Set(h.ctx, coool)
 			if err != nil {
@@ -178,7 +187,7 @@ func (h *WsHub) run() {
 				log.Printf("An error has occurred: %s", err)
 			}
 
-			var messages []CoolMessage
+			var messages []ChatMessage
 			messages = append(messages, coool)
 			var coolmsgbytes, perr = json.Marshal(messages)
 			if perr != nil {
@@ -240,9 +249,6 @@ func main() {
 	http.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 		wsEndpoint(rw, r, hub)
 	})
-	http.HandleFunc("/people", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, fmt.Sprint((len(hub.clients))))
-	})
 
 	http.HandleFunc("/imagefile", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -264,6 +270,11 @@ func main() {
 	log.Println("Running golang backend!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+type ImageFixResponse struct {
+	Image string `json:"Image"`
+}
+
 func ReceiveFile(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20) // limit your max input length!
 	var buf bytes.Buffer
@@ -290,11 +301,70 @@ func ReceiveFile(w http.ResponseWriter, r *http.Request) {
 
 	myReader := strings.NewReader(contents)
 
-	detectErr := detectText(w, myReader)
+	detresult, detectErr := detectText(w, myReader)
+	//fmt.Printf("SEND THIS %s", detresult)
+	jsonBody := []byte(detresult)
+	bodyReader := bytes.NewReader(jsonBody)
+	// Go to .NET to get back painted picture
+	resp, err := http.Post(fmt.Sprintf("https://localhost:44397/ImageFixer?Image=%s", "lul"), "application/json", bodyReader)
+	if err != nil {
+		fmt.Println("NOT GOOD........")
+		panic(err)
+	}
+	body, resperror := ioutil.ReadAll(resp.Body)
+	if resperror != nil {
+		fmt.Println(resp.Body)
+		panic(resperror)
+	}
+	defer resp.Body.Close()
+
+	var imageFix ImageFixResponse
+	//fmt.Println(fmt.Sprintf("body: %v", string(body)))
+	decodeerr := json.Unmarshal(body, &imageFix)
+	if err != nil {
+		panic(decodeerr)
+	}
+	picbytes, _ := b64.StdEncoding.DecodeString(imageFix.Image)
+
+	//picbytes := []byte(imageFix.Image)
+	reader := bytes.NewReader(picbytes)
+	decodedIntoImage, errJpg := jpeg.Decode(reader)
+	if errJpg != nil {
+		return
+	}
+	if err != nil {
+		return
+	}
+
+	w2, err := os.Create("outputFile.jpg")
+	if err != nil {
+		return
+	}
+	err = jpeg.Encode(w2, decodedIntoImage, nil)
+
+	var returnObj ImageitemResponse
+	var imageitemparsed Imageitem
+	returnObj.Image = string(picbytes)
+	returnObj.Texts = imageitemparsed.Texts
+
+	// jsonagain, marshallerr := json.Marshal(returnObj)
+	// if marshallerr != nil {
+	// 	panic("cant marshal")
+	// }
+	// Print back the base64 picture as string from bytes
+	fmt.Fprintf(w, detresult)
+	if err != nil {
+		return
+	}
+
+	//fmt.Println(string(imageFix.Image))
+	//fmt.Println(fmt.Sprintf("imagefix: %v", imageFix))
+
 	if detectErr != nil {
 		panic(detectErr)
 	}
 	buf.Reset()
+
 	// do something else
 	// etc write header
 }
@@ -319,7 +389,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 	fmt.Printf("welcome %+v\n", client.conn.RemoteAddr())
 
 	client.hub.register <- client
-	var dbmessages []*CoolMessage
+	var dbmessages []*ChatMessage
 
 	iter := hub.fsclient.Collection("messages").OrderBy("Time", firestore.Desc).Limit(50).Documents(hub.ctx)
 	for {
@@ -332,7 +402,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 		}
 		fmt.Println(doc.Data())
 
-		var c CoolMessage
+		var c ChatMessage
 		doc.DataTo(&c)
 		fmt.Printf("Document data: %#v\n", c)
 		//var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Data("")("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
@@ -356,96 +426,181 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request, hub *WsHub) {
 
 }
 
-func reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		// print out incoming message
-		fmt.Println("incoming message: " + string(p))
-	}
-}
-
-type imageResponse struct {
+type Imageitem struct {
 	Image []byte     `json:"image"`
-	Texts []textInfo `json:"texts"`
+	Texts []TextInfo `json:"textInfo"`
 }
-type textInfo struct {
+type ImageitemResponse struct {
+	Image string     `json:"image"`
+	Texts []TextInfo `json:"textInfo"`
+}
+type TextInfo struct {
 	Text         string                 `json:"text"`
 	Boundingpoly *visionpb.BoundingPoly `json:"boundingpoly"`
 }
 
+func addBlackRectangle(theimage image.Image, x1, y1, x2, y2 int) (err error) {
+	rect1 := theimage.Bounds()
+	rect2 := image.Rect(x1, y1, x2, y2)
+	rect2.Inset(-10)
+	if !rect2.In(rect1) {
+		err = fmt.Errorf("error: rectangle outside image")
+		return
+	}
+	rgba := image.NewRGBA(rect1)
+	for x := rect1.Min.X; x <= rect1.Max.X; x++ {
+		for y := rect1.Min.Y; y <= rect1.Max.Y; y++ {
+			p := image.Pt(x, y)
+			if p.In(rect2) {
+				rgba.Set(x, y, color.Black)
+			} else {
+				rgba.Set(x, y, theimage.At(x, y))
+			}
+		}
+	}
+
+	outputFile := "hej.jpg"
+	w, err := os.Create(outputFile)
+	defer w.Close()
+
+	err = jpeg.Encode(w, rgba, nil)
+	return
+}
+
+func drawRectangle(img draw.Image, color color.Color, poly *geom.Polygon) {
+
+	cords := poly.Coords()
+	for _, c := range cords {
+		//fmt.Println((fmt.Sprintf("%v", c)))
+
+		for i, v := range c {
+			// fmt.Println((fmt.Sprintf("this is what we got for X: %v", int(v.Clone().X()))))
+			// fmt.Println((fmt.Sprintf("this is what we got for Y: %v", int(v.Clone().Y()))))
+			img.Set(i, int(v.Clone().X()), color)
+			img.Set(i, int(v.Clone().Y()), color)
+
+			fmt.Println((fmt.Sprintf("next...")))
+
+		}
+
+	}
+	// for i := x1; i < x2; i++ {
+	// 	img.Set(i, y1, color)
+	// 	img.Set(i, y2, color)
+	// }
+
+	// for i := y1; i <= y2; i++ {
+	// 	img.Set(x1, i, color)
+	// 	img.Set(x2, i, color)
+	// }
+}
+
+func addRectangleToFace(img draw.Image, poly *geom.Polygon) draw.Image {
+	myColor := color.RGBA{255, 0, 255, 255}
+
+	//min := poly.Min
+	//max := poly.Max
+
+	drawRectangle(img, myColor, poly)
+
+	return img
+}
+
 // detectText gets text from the Vision API for an image at the given file path.
-func detectText(w io.Writer, reader io.Reader) error {
+func detectText(w io.Writer, reader io.Reader) (string, error) {
 	ctx := context.Background()
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	image, err := vision.NewImageFromReader(reader)
+	visionimage, err := vision.NewImageFromReader(reader)
 	if err != nil {
-		return err
+		return "", err
 	}
-	annotations, err := client.DetectTexts(ctx, image, nil, 10)
+	annotations, err := client.DetectTexts(ctx, visionimage, nil, 10)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	textInfos := make([]textInfo, 0)
+	textInfos := make([]TextInfo, 0)
+
 	if len(annotations) == 0 {
 		fmt.Fprintln(w, "No text found.")
 	} else {
-		result := &imageResponse{
-			Image: image.Content,
-		}
-		for _, annotation := range annotations {
 
-			//fmt.Fprintf(w, "%q,", annotation.Description)
+		//rects = make([]img.Rectangle, 0)
+
+		result := &Imageitem{
+			Image: visionimage.Content,
+		}
+
+		decodedvisionImage, errJpg := jpeg.Decode(bytes.NewReader(visionimage.Content))
+
+		// convert as usable image
+		b := decodedvisionImage.Bounds()
+		drawedvisionimage := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+		draw.Draw(drawedvisionimage, drawedvisionimage.Bounds(), decodedvisionImage, b.Min, draw.Src)
+
+		//err := addBlackRectangle(decodedvisionImage, 100, 100, 200, 200)
+
+		for _, annotation := range annotations {
 			if annotation.Description == "" || annotation.BoundingPoly == nil {
 				continue
 			}
-			obj := &textInfo{
+			obj := &TextInfo{
 				Text:         annotation.Description,
 				Boundingpoly: annotation.BoundingPoly,
 			}
-			//fmt.Println(annotation.BoundingPoly)
+
+			// vert := annotation.BoundingPoly.GetVertices()
+
+			// // poly := geom.NewPolygon(geom.XY).MustSetCoords([][]geom.Coord{
+			// // 	{{float64(vert[0].X), float64(vert[0].Y)}, {float64(vert[1].X), float64(vert[1].Y)}, {float64(vert[2].X), float64(vert[2].X)}},
+			// // })
+			// // //myRectangle := image.Rect(int(vert[0].X), int(vert[0].Y), int(vert[len(vert)-1].X), int(vert[len(vert)-1].Y))
+
+			// // imgres := addRectangleToFace(drawedvisionimage, poly)
+			// // dst := addRectangleToFace(imgres, poly)
+
+			// outputFile, err := os.Create("dst.png")
+			// png.Encode(outputFile, dst)
+
+			//outputFile.Close()
+			if err != nil {
+				panic(err.Error())
+			}
 
 			textInfos = append(textInfos, *obj)
 		}
 
+		if err != nil {
+			log.Fatal(err)
+		}
+		if errJpg != nil {
+			fmt.Println(err)
+			return "", nil
+		}
+		//imgdraw.DrawMask(jpgI, img1.Bounds(), img1, img.Point{0, 0}, draw.Src)
+
 		result.Texts = textInfos
+		result.Image = visionimage.Content
 
 		//fmt.Fprintf(w, "%v", textInfos)
-		b, err := json.Marshal(result)
+		ba, err := json.Marshal(result)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Fprintf(w, "%v", string(b))
 
-		//fmt.Println(string(b))
+		// Print result back to writer
 
+		// https://localhost:44397/
+
+		//fmt.Fprintf(w, "%v", )
+		fmt.Println(fmt.Sprintln("sending", string(ba)))
+		return string(ba), nil
 	}
 
-	return nil
+	return "", nil
 }
-
-// docs, err := db.Query("messages").Sort(c.SortOption{"time", -1}).FindAll()
-// for _, doc := range docs {
-// 	print(doc)
-// 	//doc.Unmarshal(&storehere)
-// 	//fmt.Printf("have?.. %v", doc.Unmarshal(&storehere)) doesnt work
-// 	timeposted, ok := doc.Get("time").(int64)
-
-// 	if !ok {
-// 		panic("cant parse the time")
-// 	}
-// 	var coool = CoolMessage{string(fmt.Sprintf("%v", doc.Get("text"))), timeposted, fmt.Sprintf("%v", doc.Get("user"))}
-// 	dbmessages = append(dbmessages, coool)
-
-// }

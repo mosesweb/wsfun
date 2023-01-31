@@ -11,7 +11,10 @@ require (
 
 require (
 	cloud.google.com/go/vision/v2 v2.5.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gomodule/redigo v1.8.9 // indirect
+	github.com/twpayne/go-geom v1.5.0 // indirect
+	golang.org/x/image v0.0.0-20190802002840-cff245a6509b // indirect
 )
 
 require (
@@ -22,6 +25,7 @@ require (
 	cloud.google.com/go/longrunning v0.3.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	cloud.google.com/go/vision v1.2.0
+	github.com/fogleman/gg v1.3.0
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
