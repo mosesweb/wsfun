@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"image/jpeg"
 	"io"
@@ -24,7 +23,6 @@ import (
 	"cloud.google.com/go/vision/v2/apiv1/visionpb"
 	firebase "firebase.google.com/go"
 	"github.com/gorilla/websocket"
-	"github.com/twpayne/go-geom"
 	"google.golang.org/api/iterator"
 )
 
@@ -439,77 +437,13 @@ type TextInfo struct {
 	Boundingpoly *visionpb.BoundingPoly `json:"boundingpoly"`
 }
 
-func addBlackRectangle(theimage image.Image, x1, y1, x2, y2 int) (err error) {
-	rect1 := theimage.Bounds()
-	rect2 := image.Rect(x1, y1, x2, y2)
-	rect2.Inset(-10)
-	if !rect2.In(rect1) {
-		err = fmt.Errorf("error: rectangle outside image")
-		return
-	}
-	rgba := image.NewRGBA(rect1)
-	for x := rect1.Min.X; x <= rect1.Max.X; x++ {
-		for y := rect1.Min.Y; y <= rect1.Max.Y; y++ {
-			p := image.Pt(x, y)
-			if p.In(rect2) {
-				rgba.Set(x, y, color.Black)
-			} else {
-				rgba.Set(x, y, theimage.At(x, y))
-			}
-		}
-	}
-
-	outputFile := "hej.jpg"
-	w, err := os.Create(outputFile)
-	defer w.Close()
-
-	err = jpeg.Encode(w, rgba, nil)
-	return
-}
-
-func drawRectangle(img draw.Image, color color.Color, poly *geom.Polygon) {
-
-	cords := poly.Coords()
-	for _, c := range cords {
-		//fmt.Println((fmt.Sprintf("%v", c)))
-
-		for i, v := range c {
-			// fmt.Println((fmt.Sprintf("this is what we got for X: %v", int(v.Clone().X()))))
-			// fmt.Println((fmt.Sprintf("this is what we got for Y: %v", int(v.Clone().Y()))))
-			img.Set(i, int(v.Clone().X()), color)
-			img.Set(i, int(v.Clone().Y()), color)
-
-			fmt.Println((fmt.Sprintf("next...")))
-
-		}
-
-	}
-	// for i := x1; i < x2; i++ {
-	// 	img.Set(i, y1, color)
-	// 	img.Set(i, y2, color)
-	// }
-
-	// for i := y1; i <= y2; i++ {
-	// 	img.Set(x1, i, color)
-	// 	img.Set(x2, i, color)
-	// }
-}
-
-func addRectangleToFace(img draw.Image, poly *geom.Polygon) draw.Image {
-	myColor := color.RGBA{255, 0, 255, 255}
-
-	//min := poly.Min
-	//max := poly.Max
-
-	drawRectangle(img, myColor, poly)
-
-	return img
-}
-
 // detectText gets text from the Vision API for an image at the given file path.
 func detectText(w io.Writer, reader io.Reader) (string, error) {
 	ctx := context.Background()
-
+	var ctxi *visionpb.ImageContext
+	var langs = make([]string, 1)
+	langs[0] = "ja-t-i0-handwrit" // https://cloud.google.com/vision/docs/ocr
+	ctxi.LanguageHints = langs
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
 		return "", err
