@@ -270,7 +270,8 @@ func main() {
 }
 
 type ImageFixResponse struct {
-	Image string `json:"Image"`
+	Image string     `json:"Image"`
+	Texts []TextInfo `json:"TextInfo"`
 }
 
 func ReceiveFile(w http.ResponseWriter, r *http.Request) {
@@ -341,16 +342,20 @@ func ReceiveFile(w http.ResponseWriter, r *http.Request) {
 	err = jpeg.Encode(w2, decodedIntoImage, nil)
 
 	var returnObj ImageitemResponse
-	var imageitemparsed Imageitem
-	returnObj.Image = string(picbytes)
-	returnObj.Texts = imageitemparsed.Texts
+	returnObj.Image = imageFix.Image
+	returnObj.Texts = imageFix.Texts
 
 	// jsonagain, marshallerr := json.Marshal(returnObj)
 	// if marshallerr != nil {
 	// 	panic("cant marshal")
 	// }
 	// Print back the base64 picture as string from bytes
-	fmt.Fprintf(w, detresult)
+	marshalReturn, errmarshal := json.Marshal(returnObj)
+	if errmarshal != nil {
+		print("cant marshal")
+	}
+	w.Write(marshalReturn)
+	//fmt.Fprintf(w, marshalReturn)
 	if err != nil {
 		return
 	}
@@ -440,10 +445,10 @@ type TextInfo struct {
 // detectText gets text from the Vision API for an image at the given file path.
 func detectText(w io.Writer, reader io.Reader) (string, error) {
 	ctx := context.Background()
-	var ctxi *visionpb.ImageContext
-	var langs = make([]string, 1)
-	langs[0] = "ja-t-i0-handwrit" // https://cloud.google.com/vision/docs/ocr
-	ctxi.LanguageHints = langs
+	//var ctxi *visionpb.ImageContext
+	//var langs = make([]string, 1)
+	//langs[0] = "ja-t-i0-handwrit" // https://cloud.google.com/vision/docs/ocr
+	//ctxi.LanguageHints = langs
 	client, err := vision.NewImageAnnotatorClient(ctx)
 	if err != nil {
 		return "", err

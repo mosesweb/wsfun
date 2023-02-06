@@ -24,7 +24,7 @@ class ChatMessage {
 }
 
 class imageResponse {
-  texts: textInfo[] = []
+  textInfo: textInfo[] = []
   image: string = ""
 }
 class vertices {
@@ -206,11 +206,9 @@ function App() {
         }
     }).then(e => {
       console.log(e.data);
-      let dataFixed: string = e.data.replace("(MISSING)","");
-      
-      const dataResult = JSON.parse(dataFixed) as imageResponse;
-      console.log(dataResult);
-      SetimageText(dataResult);
+      //const dataResult = JSON.parse(e.data)
+     // console.log(dataResult);
+      SetimageText(e.data);
     })
   }
 
